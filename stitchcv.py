@@ -40,8 +40,6 @@ class Stitcher:
 
         # apply a perspective transform to stitch the images together
         # using the cached homography matrix
-        if(imageA.shape == None):
-            imageA = imageA.next() 
         result = cv2.warpPerspective(imageA, self.cachedH, (imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
         
         result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
@@ -98,8 +96,7 @@ class Stitcher:
             ptsB = np.float32([kpsB[i] for (i, _) in matches])
 
             # compute the homography between the two sets of points
-            (H, status) = cv2.findHomography(ptsA, ptsB, cv2.RANSAC,
-                reprojThresh)
+            (H, status) = cv2.findHomography(ptsA, ptsB, cv2.RANSAC,reprojThresh)
 
             # return the matches along with the homograpy matrix
             # and status of each matched point
@@ -113,9 +110,9 @@ DEFAULT_ENDPOINT = "http://ceph-route-rook-ceph.apps.jweng-ocp.shiftstack.com"
 DEFAULT_ACCESS = "QjdOMFdZNEE3NTc3MUwwMDNZT1M="
 DEFAULT_SECRET = "cmlBWFZLa2tIaWhSaTN5Sk5FNGpxaGRlc2ZGWWtwMWZqWFpqR0FrRA=="
 
-#s3 = boto3.client(service_name = 's3', use_ssl = False, verify = False, endpoint_url=DEFAULT_ENDPOINT,
-                           # aws_access_key_id = base64.decodebytes(bytes(DEFAULT_ACCESS,'utf-8')).decode('utf-8'),
-                            #aws_secret_access_key = base64.decodebytes(bytes(DEFAULT_SECRET,'utf-8')).decode('utf-8'),)
+s3 = boto3.client(service_name = 's3', use_ssl = False, verify = False, endpoint_url=DEFAULT_ENDPOINT,
+                           aws_access_key_id = base64.decodebytes(bytes(DEFAULT_ACCESS,'utf-8')).decode('utf-8'),
+                            aws_secret_access_key = base64.decodebytes(bytes(DEFAULT_SECRET,'utf-8')).decode('utf-8'),)
 
 # initialize the video streams and allow them to warmup
 print("++++++ Getting video files...")
@@ -123,10 +120,13 @@ print("++++++ Getting video files...")
 # rightStream = VideoStream(usePiCamera=True).start()
 
 
-#cap1 = s3.download_file(self.bucket,self.key,"out.mp4")
-#cap2 = s3.download_file(self.bucket,self.key,"out.mp4")
-captest1 = cv2.VideoCapture('first.avi')
-captest2 = cv2.VideoCapture('second.avi')
+# s3.download_file(DEMO,right.mp4,"demovids/right.mp4")
+# s3.download_file(DEMO,left.mp4,"demovids/left.mp4")
+
+captest1 = cv2.VideoCapture('videos/left.mp4')
+captest2 = cv2.VideoCapture('videos/right.mp4')
+#captest1 = cv2.VideoCapture('first.avi')
+# captest2 = cv2.VideoCapture('second.avi')
 
 
 time.sleep(2.0)
@@ -134,7 +134,6 @@ time.sleep(2.0)
 # initialize the image stitcher, motion detector, and total
 # number of frames read
 stitcher = Stitcher()
-# motion = BasicMotionDetector(minArea=500)
 total = 0
 
 # loop over frames from the video streams
@@ -143,126 +142,45 @@ total = 0
 while True:
     ret1, frame1 = captest1.read()
     ret2, frame2 = captest2.read()
-    w = 400
-    h = 400
+    w = 800
+    h = 800
     dim = (w, h)
-    # frame1 = cv2.resize(frame1, dim)
-    # frame2 = cv2.resize(frame2, dim)
 
-    
-
-    try:
-        # frame1 = cv2.resize(frame1, dim)
-        # frame2 = cv2.resize(frame2, dim)
-        print("***************")
-        if frame1 == None or frame2 == None:
-            print("XXXXXX")
-            break
-        frame1 = imutils.resize(left, width=400)
-        frame2 = imutils.resize(right, width=400)
-        (h, w, d) = frame1.shape
-        print("w: {}, h: {}, d: {}").format(w, h, d)
+    # try:
+    #     # frame1 = cv2.resize(frame1, dim)
+    #     # frame2 = cv2.resize(frame2, dim)
+    #     print("***************")
+    #     if frame1 == None or frame2 == None:
+    #         print("XXXXXX")
+    #         break
+    #     frame1 = imutils.resize(frame1, width=900)
+    #     frame2 = imutils.resize(frame2, width=900)
+    #     (h, w, d) = frame1.shape
+    #     print("w: {}, h: {}, d: {}").format(w, h, d)
         
-    except:
-        print("error")
+    # except:
+    #     print("error")
     
-    
-    
-    
+    frame1 = imutils.resize(frame1,width=600)
+    frame2 = imutils.resize(frame2, width=600)
+    # frame1 = cv2.flip(frame1, 4)
+    # frame2 = cv2.flip(frame2, 4)
     res = stitcher.stitch([frame1, frame2])
 
     total += 1
 
     cv2.imshow("result", res)
-    #cv2.imshow('left', frame1)
-    #cv2.imshow("right", frame2)
-    key = cv2.waitKey(1) & 0xFF
-    print(total)
+    key = cv2.waitKey(100) & 0xFF
+    
     if key == ord("q"): 
         break
-'''    
-while True:
-    # grab the frames from their respective video streams
-    # left = leftStream.read()
-    # right = rightStream.read()
-    ret1, frame1 = captest1.read()
-    ret2, frame2 = captest2.read()
 
-    # resize the frames
-    # left = imutils.resize(left, width=400)
-    # right = imutils.resize(right, width=400)
-    w = 400
-    h = 400
-    dim = (w, h)
-    frame1 = cv2.resize(frame1, dim) 
-    frame2 = imutils.resize(frame2, dim)
-
-    # stitch the frames together to form the panorama
-    # IMPORTANT: you might have to change this line of code
-    # depending on how your cameras are oriented; frames
-    # should be supplied in left-to-right order
-    
-    result = stitcher.stitch([frame1, frame2])
-
-    # no homograpy could be computed
-    # if result is None: 
-    #     print("[INFO] homography could not be computed")
-    # 	break
-
-    # # convert the panorama to grayscale, blur it slightly, update
-    # # the motion detector
-    # gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-    # gray = cv2.GaussianBlur(gray, (21, 21), 0)
-    # locs = motion.update(gray)
-
-    # # only process the panorama for motion if a nice average has
-    # # been built up
-    # if total > 32 and len(locs) > 0:
-    # 	# initialize the minimum and maximum (x, y)-coordinates,
-    # 	# respectively
-    # 	(minX, minY) = (np.inf, np.inf)
-    # 	(maxX, maxY) = (-np.inf, -np.inf)
-
-    # 	# loop over the locations of motion and accumulate the
-    # 	# minimum and maximum locations of the bounding boxes
-    # 	for l in locs:
-    # 		(x, y, w, h) = cv2.boundingRect(l)
-    # 		(minX, maxX) = (min(minX, x), max(maxX, x + w))
-    # 		(minY, maxY) = (min(minY, y), max(maxY, y + h))
-
-    # 	# draw the bounding box
-    # 	cv2.rectangle(result, (minX, minY), (maxX, maxY),
-    # 		(0, 0, 255), 3)
-
-    # increment the total number of frames read and draw the 
-    # timestamp on the image
-    
-    total += 1
-    # timestamp = datetime.datetime.now()
-    # ts = timestamp.strftime("%A %d %B %Y %I:%M:%S%p")
-    # cv2.putText(result, ts, (10, result.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
-
-    # show the output images
-    cv2.imshow("Result", result)
-    cv2.imshow("Left Frame", left)
-    cv2.imshow("Right Frame", right)
-    key = cv2.waitKey(1) & 0xFF
-
-    # out = cv2.VideoWriter('output.avi', cv2.VideoWriter_fourcc(*'XVID'), 
-    # cap.get(cv2.CAP_PROP_FPS), (2 * frameWidth,frameHeight))
-    # out.write(result)
-
-    # if the `q` key was pressed, break from the loop
-    if key == ord("q"):
-        break
-'''
 
 
 # do a bit of cleanup
 print("[INFO] cleaning up...")
-cv2.destroyAllWindows()
+
 captest1.release()
 captest2.release()
+cv2.destroyAllWindows()
 
-# leftStream.stop()
-# rightStream.stop()
